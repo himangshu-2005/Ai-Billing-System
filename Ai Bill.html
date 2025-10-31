@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🧠 AI Billing System — Smart Invoice Generator</title>
+<style>
+  :root {
+    --bg1:#040617;--bg2:#671a63;--card:#111a33;
+    --text:#e2e8f0;--muted:#94a3b8;
+    --accent:#8b5cf6;--accent2:#29b1b1;
+    --success:#10b981;--danger:#ef4444;
+    --input-bg:#1a2440;
+  }
+  body {
+    margin:0;
+    font-family:"Poppins",system-ui,sans-serif;
+    background:radial-gradient(circle at top left,var(--bg1),var(--bg2));
+    color:var(--text);
+    transition:0.4s;
+  }
+  .wrap{max-width:1100px;margin:25px auto;padding:16px;}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;}
+  h1{color:var(--accent2);font-weight:600;font-size:24px;text-shadow:0 0 10px rgba(6,182,212,0.6);}
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 0 30px rgba(211, 74, 74, 0.45);
+    backdrop-filter:blur(10px);
+    transition:0.3s;
+  }
+  .card:hover{transform:translateY(-3px);}
+  button{
+    border:none;border-radius:10px;
+    padding:9px 15px;font-weight:600;
+    cursor:pointer;transition:0.25s;
+    letter-spacing:0.3px;
+  }
+  button:hover{transform:scale(1.05);}
+  .primary{background:var(--accent);color:#fff;}
+  .secondary{background:var(--accent2);color:#fff;}
+  .success{background:var(--success);color:#fff;}
+  .danger{background:var(--danger);color:#fff;}
+  input,select{
+    background:var(--input-bg);
+    border:1px solid rgba(33, 207, 14, 0.15);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px;
+    width:100%;
+    transition:0.3s;
+    font-size:17px;
+  }
+  input:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 6px var(--accent2);}
+  table{width:100%;border-collapse:collapse;margin-top:8px;}
+  th,td{padding:8px;border-bottom:1px solid rgba(205, 53, 53, 0.08);}
+  th{color:var(--muted);font-size:13px;text-align:left;}
+  .muted{color:var(--muted);font-size:13px;}
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:18px;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+
+  .sum .row{display:flex;justify-content:space-between;margin-top:6px;}
+  .total{font-size:20px;font-weight:700;color:var(--accent2);}
+  #aiChat{height:180px;overflow-y:auto;background:var(--input-bg);border-radius:10px;padding:10px;font-size:13px;}
+  .aiMsg{color:var(--accent2);margin:4px 0;}
+  .userMsg{color:var(--success);margin:4px 0;}
+  footer{text-align:center;margin-top:18px;color:var(--muted);font-size:13px;}
+  .ai-panel{
+    margin-top:16px;
+    background:linear-gradient(90deg,#110735,#0d061e);
+    padding:12px;
+    border-radius:14px;
+    box-shadow:inset 0 0 25px rgba(139,92,246,0.25);
+  }
+  .ai-panel h3{margin:0;color:var(--accent);font-weight:600;}
+  .ai-chip{
+    display:inline-block;
+    background:rgba(97, 202, 59, 0.2);
+    color:var(--text);
+    padding:5px 12px;
+    border-radius:16px;
+    font-size:13px;
+    margin:4px;
+    border:1px solid rgba(139,92,246,0.3);
+  }
+
+  /* PRINT STYLE */
+  @media print {
+    body{background:#c94747;color:#000;}
+    header, #aiPanel, #aiChat, #askBtn, #aiInput, #exportCSV, #printBtn, #addBtn, #clearAll, #saveBtn, .secondary, .primary, .success, .danger{display:none !important;}
+    .card{box-shadow:none;background:#fff;}
+    #invoiceView{display:block;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🧾 AI Billing Assistant</h1>
+    <div>
+      <button class="secondary" id="printBtn">🖨 Print / PDF</button>
+      <button class="primary" id="exportCSV">📤 Export CSV</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1">
+            <div class="muted">Customer</div>
+            <input id="customerName" placeholder="Name / Department">
+          </div>
+          <div style="flex:1">
+            <div class="muted">Invoice #</div>
+            <input id="invoiceNo" readonly>
+          </div>
+          <div style="flex:1">
+            <div class="muted">Date</div>
+            <input id="date" readonly>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:12px;align-items:end;">
+          <div style="flex:1"><div class="muted">Item</div><input id="item" placeholder="Type product (AI suggest)"></div>
+          <div><div class="muted">Qty</div><input id="qty" type="number" min="1" value="1"></div>
+          <div><div class="muted">Rate</div><input id="rate" type="number" min="0" value="0"></div>
+          <button class="success" id="addBtn">Add</button>
+        </div>
+
+        <table id="table">
+          <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="sum">
+          <div class="row"><div class="muted">Subtotal</div><div id="sub">₹0.00</div></div>
+          <div class="row"><div class="muted">Tax (18%)</div><div id="tax">₹0.00</div></div>
+          <div class="row">
+            <div class="muted">Discount</div>
+            <div>
+              <input id="discount" type="number" min="0" value="0" style="width:70px">
+              <select id="dtype"><option value="%">%</option><option value="₹">₹</option></select>
+            </div>
+          </div>
+          <div class="row total"><div>Total</div><div id="total">₹0.00</div></div>
+        </div>
+
+        <div style="margin-top:12px;text-align:right;">
+          <button class="danger" id="clearAll">Clear</button>
+          <button class="primary" id="saveBtn">💾 Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h3 style="margin-top:0;color:var(--accent2)">💬 AI ASSISTANT (Price,Brand etc.)</h3>
+        <div id="aiChat"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <input id="aiInput" placeholder="Ask AI anything (e.g. suggest a price)">
+          <button class="secondary" id="askBtn">Ask</button>
+        </div>
+      </div>
+
+      <div class="ai-panel" id="aiPanel">
+        <h3>🧠 AI Knowledge Base Pd. Price</h3>
+        <div id="aiChips"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <input id="newItem" placeholder="Add new product">
+          <input id="newRate" type="number" placeholder="Rate" style="width:80px">
+          <button class="success" id="addAI">➕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>🎓 Offline AI Billing System — Made by 𝐇𝐈𝐌𝐀𝐍𝐆𝐒𝐇𝐔 𝐆𝐇𝐎𝐒𝐇
+</footer>
+
+  <!-- 🧾 PRINT VIEW -->
+  <div id="invoiceView" style="display:none;">
+    <h2 style="text-align:center;">Final Invoice</h2>
+    <p><b>Customer:</b> <span id="printCustomer"></span></p>
+    <p><b>Invoice No:</b> <span id="printInvoice"></span> | <b>Date:</b> <span id="printDate"></span></p>
+    <table border="1" cellspacing="0" cellpadding="5" width="100%">
+      <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+      <tbody id="printTable"></tbody>
+    </table>
+    <h3 style="text-align:right;margin-top:10px;">Total: <span id="printTotal"></span></h3>
+  </div>
+</div>
+
+<script>
+const el=id=>document.getElementById(id);
+const money=v=>'₹'+Number(v||0).toFixed(2);
+let items=[];
+let aiDB=JSON.parse(localStorage.getItem("aiProducts")||"{}");
+if(Object.keys(aiDB).length===0){
+  aiDB={"pen":10,"pencil":5,"notebook":40,"eraser":5,"file cover":25,"lab coat":350,"usb drive":250,"exam fee":1200};
+  localStorage.setItem("aiProducts",JSON.stringify(aiDB));
+}
+
+function genInvoiceNo(){
+  const d=new Date();
+  const date=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const rnd=Math.floor(Math.random()*900+100);
+  return`INV-${date}-${rnd}`;
+}
+el("invoiceNo").value=genInvoiceNo();
+el("date").value=new Date().toLocaleDateString();
+
+function render(){
+  const tb=el("table").querySelector("tbody");
+  tb.innerHTML=items.map((it,i)=>`<tr><td>${it.item}</td><td>${it.qty}</td><td>${money(it.rate)}</td><td>${money(it.qty*it.rate)}</td><td><button class='danger' onclick='del(${i})'>×</button></td></tr>`).join("");
+  const sub=items.reduce((s,i)=>s+i.qty*i.rate,0);
+  const tax=sub*0.18;
+  const d=+el("discount").value||0;
+  const t=el("dtype").value;
+  const disc=(t=="%")?(sub*d/100):d;
+  const total=sub+tax-disc;
+  el("sub").textContent=money(sub);
+  el("tax").textContent=money(tax);
+  el("total").textContent=money(total);
+}
+function add(){
+  const item=el("item").value.trim();
+  const qty=+el("qty").value||0;
+  const rate=+el("rate").value||0;
+  if(!item||qty<=0)return alert("Enter valid details");
+  items.push({item,qty,rate});
+  if(!aiDB[item.toLowerCase()])aiDB[item.toLowerCase()]=rate;
+  localStorage.setItem("aiProducts",JSON.stringify(aiDB));
+  render();showAI();aiSpeak(`Added ${qty} × ${item}`);
+  el("item").value="";el("qty").value=1;el("rate").value=0;
+}
+function del(i){items.splice(i,1);render();}
+function clearAll(){if(confirm("Clear all items?")){items=[];render();aiSpeak("Cleared all items.");}}
+function save(){aiSpeak("Invoice saved successfully!");alert("Saved ✅");el("invoiceNo").value=genInvoiceNo();render();}
+
+function aiSpeak(msg){el("aiChat").innerHTML+=`<div class='aiMsg'>🤖 ${msg}</div>`;el("aiChat").scrollTop=9999;}
+function userSpeak(msg){el("aiChat").innerHTML+=`<div class='userMsg'>🧍‍♂️ ${msg}</div>`;el("aiChat").scrollTop=9999;}
+function showAI(){el("aiChips").innerHTML=Object.entries(aiDB).slice(0,20).map(([k,v])=>`<span class='ai-chip'>${k} — ₹${v}</span>`).join("");}
+function predictRate(name){
+  const key=name.toLowerCase();
+  if(aiDB[key])return aiDB[key];
+  if(key.includes("pen"))return 10;
+  if(key.includes("book"))return 40;
+  if(key.includes("file"))return 25;
+  return Math.floor(50+Math.random()*200);
+}
+el("askBtn").onclick=()=>{
+  const q=el("aiInput").value.trim();
+  if(!q)return;
+  userSpeak(q);
+  let r="Hmm...";
+  if(/price|cost|rate/i.test(q)){
+    const item=q.split(" ").pop();
+    r=`Estimated price for "${item}" ≈ ₹${predictRate(item)}.`;
+  }else if(/total/i.test(q)){
+    r=`Current total: ${el("total").textContent}`;
+  }else r="I can suggest prices, totals, or product ideas!";
+  setTimeout(()=>aiSpeak(r),400);
+  el("aiInput").value="";
+};
+el("addAI").onclick=()=>{
+  const n=el("newItem").value.trim().toLowerCase();
+  const r=+el("newRate").value||0;
+  if(!n||r<=0)return alert("Enter product + rate");
+  aiDB[n]=r;
+  localStorage.setItem("aiProducts",JSON.stringify(aiDB));
+  showAI();
+  aiSpeak(`Added "${n}" to knowledge.`);
+  el("newItem").value="";el("newRate").value="";
+};
+
+el("printBtn").onclick=()=>{
+  el("printCustomer").textContent=el("customerName").value||"—";
+  el("printInvoice").textContent=el("invoiceNo").value;
+  el("printDate").textContent=el("date").value;
+  el("printTable").innerHTML=items.map(i=>`<tr><td>${i.item}</td><td>${i.qty}</td><td>${money(i.rate)}</td><td>${money(i.qty*i.rate)}</td></tr>`).join("");
+  el("printTotal").textContent=el("total").textContent;
+  window.print();
+};
+el("exportCSV").onclick=()=>{
+  if(!items.length)return alert("No data");
+  const csv=["Item,Qty,Rate,Amount",...items.map(i=>`${i.item},${i.qty},${i.rate},${i.qty*i.rate}`)].join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download="invoice.csv";
+  a.click();
+};
+el("item").addEventListener("input",()=>{
+  const val=el("item").value.toLowerCase();
+  const m=Object.keys(aiDB).find(k=>k.includes(val));
+  if(m){el("item").style.color="#8b5cf6";el("rate").value=aiDB[m];}
+});
+el("discount").addEventListener("input",render);
+el("dtype").addEventListener("change",render);
+el("addBtn").onclick=add;
+el("clearAll").onclick=clearAll;
+el("saveBtn").onclick=save;
+showAI();
+render();
+aiSpeak(" 𝐏𝐥𝐞𝐚𝐬𝐞, 𝐀𝐬𝐤 𝐲𝐨𝐮𝐫 𝐪𝐮𝐞𝐫𝐲 😎!!");
+</script>
+</body>
+</html>
+
+
